@@ -1,0 +1,34 @@
+# Dependencies
+node_modules/
+
+# macOS
+.DS_Store
+._*
+
+# Logs
+*.log
+npm-debug.log*
+
+# Temporary files and backups
+*.tmp
+*.bak
+*.before-camera-tab-test
+
+# Sensitive material
+.env
+.env.*
+*.key
+*.pem
+*.p12
+*.pfx
+*.asc
+*.gpg
+
+# Camera captures
+*.mov
+*.mp4
+camera-captures/
+
+# Local test artifacts
+tmp/
+temp/

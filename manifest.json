@@ -1,0 +1,43 @@
+{
+  "manifest_version": 2,
+  "name": "ShellPGP",
+  "version": "0.1.0",
+  "description": "Experimental Keycard Shell OpenPGP integration for Thunderbird",
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "shellpgp@terricola.dev",
+      "strict_min_version": "157.0"
+    }
+  },
+  "permissions": [
+    "compose",
+    "compose.save",
+    "messagesRead",
+    "notifications"
+  ],
+  "background": {
+    "scripts": [
+      "background.js"
+    ]
+  },
+  "compose_action": {
+    "default_title": "ShellPGP Sign",
+    "default_label": "ShellPGP Sign"
+  },
+  "experiment_apis": {
+    "composeProbe": {
+      "schema": "experiments/composeProbe/schema.json",
+      "parent": {
+        "scopes": [
+          "addon_parent"
+        ],
+        "paths": [
+          [
+            "composeProbe"
+          ]
+        ],
+        "script": "experiments/composeProbe/implementation.js"
+      }
+    }
+  }
+}

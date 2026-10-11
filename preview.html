@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>ShellPGP Signing Preview</title>
+  <style>
+    body {
+      font: 14px system-ui, sans-serif;
+      margin: 24px;
+      line-height: 1.5;
+    }
+    h1 { margin-bottom: 4px; }
+    .status { margin-bottom: 24px; }
+    .field { margin-bottom: 16px; }
+    .label { font-weight: 600; }
+    pre {
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      padding: 14px;
+      background: rgba(127,127,127,.12);
+      border-radius: 8px;
+    }
+    .warning { margin-top: 20px; }
+  </style>
+</head>
+<body>
+  <h1>ShellPGP</h1>
+  <p class="status">Signing Preview — No signature generated</p>
+
+  <div class="field">
+    <div class="label">Subject</div>
+    <div id="subject"></div>
+  </div>
+
+  <div class="field">
+    <div class="label">Message format</div>
+    <div id="format"></div>
+  </div>
+
+  <div class="field">
+    <div class="label">Message body</div>
+    <pre id="body"></pre>
+  </div>
+
+  <p class="warning">
+    Experimental preview only. This is not the final
+    canonical PGP/MIME signing payload.
+  </p>
+
+  <script src="dist/sign-request.js"></script>
+<script src="dist/qr-renderer.js"></script>
+<script src="dist/qr-scanner.js"></script>
+<script src="preview.js"></script>
+</body>
+</html>

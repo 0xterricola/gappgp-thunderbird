@@ -1,0 +1,14 @@
+{
+  "manifest_version": 2,
+  "name": "Thunderbird Camera Permission Reproduction",
+  "version": "0.1.0",
+  "description": "Minimal getUserMedia permission reproduction.",
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "camera-repro@terricola.dev"
+    }
+  },
+  "background": {
+    "scripts": ["background.js"]
+  }
+}

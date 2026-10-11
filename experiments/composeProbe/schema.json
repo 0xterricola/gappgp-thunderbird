@@ -1,0 +1,49 @@
+[
+  {
+    "namespace": "composeProbe",
+    "functions": [
+      {
+        "name": "inspectMimeFactory",
+        "type": "function",
+        "async": true,
+        "parameters": []
+      },
+      {
+        "name": "getEnvironment",
+        "type": "function",
+        "async": true,
+        "parameters": []
+      },
+      {
+        "name": "inspectComposeSessions",
+        "type": "function",
+        "async": true,
+        "parameters": []
+      },
+      {
+        "name": "inspectWindows",
+        "type": "function",
+        "async": true,
+        "parameters": []
+      },
+      {
+        "name": "inspectSecurityHandlers",
+        "type": "function",
+        "async": true,
+        "parameters": []
+      },
+      {
+        "name": "inspectSecurityIdentity",
+        "type": "function",
+        "async": true,
+        "parameters": []
+      },
+      {
+        "name": "inspectSigningIdentity",
+        "type": "function",
+        "async": true,
+        "parameters": []
+      }
+    ]
+  }
+]
