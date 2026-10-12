@@ -27,7 +27,33 @@ The demonstrated return path currently uses manual UR:BYTES paste instead of liv
 - Thunderbird independently reports **Good Digital Signature** for the exported test email.
 - Seven automated regression tests pass.
 
-These tests cover a controlled signing fixture, not arbitrary message signing.
+The original v0.5 tests cover a controlled signing fixture. The v0.6 branch adds short real-compose signing and a second hardware test vector. The combined suite contains 21 automated tests.
+
+## v0.6 Compose-Signing Security Checks
+
+- The signing request is generated from the exact serialized draft bytes.
+- The pending request retains the signed bytes and a compose snapshot.
+- The extension re-reads Thunderbird compose details before export.
+- The extension checks the draft again after asynchronous verification.
+- Draft changes invalidate the pending signing request.
+- The detached signature must verify against the original signed bytes.
+- The signature creation time must match the pending signing request.
+- Header-injection attempts are rejected.
+- Unsupported attachments and compose formats are rejected.
+
+Manual testing confirmed that modifying a draft after generating its
+signing QR prevents export. This UI-level behavior is not yet covered
+by a dedicated automated regression test.
+
+A fresh 72-byte compose message was signed using physical Keycard Shell
+hardware and exported after cryptographic verification.
+
+Thunderbird recognized the resulting OpenPGP signature but reported
+a sender-address mismatch with the public test certificate.
+
+The signature authenticates the MIME body relative to the signing key.
+It does not authenticate unsigned email headers or establish that
+the signing key belongs to the claimed sender.
 
 ## Cryptographic Compatibility
 
@@ -59,8 +85,8 @@ Production email signing must create and sign the actual message during the comp
 
 ## Current Risks and Limitations
 
-- Signing and export are restricted to a known 73-byte test fixture.
-- Arbitrary compose-message signing is not implemented.
+- v0.5 is restricted to a 73-byte fixture; v0.6 supports short ASCII plain-text compose drafts.
+- General compose-message signing, including HTML, attachments, and long content, is not implemented.
 - The current physical demonstration uses a 104-byte message limit.
 - Live camera capture is blocked in the tested Thunderbird environment.
 - Native Thunderbird send integration is not implemented.

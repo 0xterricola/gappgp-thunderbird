@@ -95,3 +95,5 @@ export function createSignRequest(
 }
 
 export { decodeSignResponse } from "./sign-response.js";
+
+export { createComposeSigningPayload } from "./compose-mime.js";

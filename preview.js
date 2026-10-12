@@ -503,3 +503,334 @@ window.testShellPGPProtocol = async function () {
 
   document.body.append(section);
 })();
+
+// ShellPGP v0.6 — Signing request from actual Thunderbird compose content.
+// This stage generates the QR only; response verification/export comes next.
+
+(function initializeComposeSigning() {
+  const section = document.createElement("section");
+  section.style.marginTop = "28px";
+
+  const heading = document.createElement("h2");
+  heading.textContent = "ShellPGP v0.6 — Sign Current Draft";
+
+  const description = document.createElement("p");
+  description.textContent =
+    "Generate a Keycard Shell signing QR from the current Thunderbird " +
+    "plain-text draft. Experimental: ASCII only, no attachments, " +
+    "104-byte signed MIME limit. This does not send email.";
+
+  const warning = document.createElement("p");
+  warning.textContent =
+    "Only the MIME message body is signed. Email headers such as " +
+    "Subject, From and To are not covered by this signature.";
+
+  const payloadDisplay = document.createElement("pre");
+  payloadDisplay.textContent = "No draft signing payload generated.";
+  payloadDisplay.style.whiteSpace = "pre-wrap";
+  payloadDisplay.style.overflowWrap = "anywhere";
+
+  const generateButton = document.createElement("button");
+  generateButton.textContent = "Generate Current Draft Signing QR";
+  generateButton.style.padding = "12px 18px";
+
+  const status = document.createElement("p");
+  status.setAttribute("role", "status");
+  status.textContent = "Waiting for a supported Thunderbird draft.";
+
+  const canvas = document.createElement("canvas");
+  canvas.style.maxWidth = "100%";
+  canvas.style.display = "none";
+
+  const params = new URLSearchParams(location.search);
+  const tabId = Number(params.get("tabId"));
+
+  // Session state stays within this preview.
+  // A future response must be verified against these exact bytes,
+  // followed by a fresh check of the Thunderbird draft.
+  let pending = null;
+
+  async function readCurrentDraft(protocol) {
+    if (!Number.isSafeInteger(tabId) || tabId <= 0) {
+      throw new Error("Invalid compose tab ID");
+    }
+
+    const details = await browser.compose.getComposeDetails(tabId);
+    const attachments = await browser.compose.listAttachments(tabId);
+
+    if (attachments.length !== 0) {
+      throw new Error(
+        "Attachment signing is not supported. Remove attachments first."
+      );
+    }
+
+    const payload = protocol.createComposeSigningPayload(
+      details,
+      104
+    );
+
+    const snapshot = JSON.stringify({
+      isPlainText: details.isPlainText,
+      plainTextBody: details.plainTextBody,
+      subject: details.subject ?? "",
+      from: details.from ?? null,
+      identityId: details.identityId ?? null,
+      to: details.to ?? [],
+      cc: details.cc ?? [],
+      bcc: details.bcc ?? [],
+      replyTo: details.replyTo ?? [],
+      attachments
+    });
+
+    return { details, payload, snapshot };
+  }
+
+  generateButton.addEventListener("click", async () => {
+    generateButton.disabled = true;
+    canvas.style.display = "none";
+    pending = null;
+    exportButton.disabled = true;
+    status.textContent = "Reading current Thunderbird draft...";
+
+    try {
+      const protocol = await ShellPGPProtocol.loadProtocol();
+      const { details, payload, snapshot } =
+        await readCurrentDraft(protocol);
+
+      // Test certificate's creation timestamp.
+      // This is NOT a general-purpose key-selection implementation.
+      const keyCreationTime = 1790822191;
+      const signatureCreationTime = Math.floor(Date.now() / 1000);
+
+      const request = protocol.createSignRequest(
+        payload.messageText,
+        keyCreationTime,
+        signatureCreationTime,
+        104
+      );
+
+      await ShellPGPQR.renderQRCode(canvas, request.urText);
+
+      pending = {
+        snapshot,
+        messageBytes: Uint8Array.from(payload.messageBytes),
+        messageText: payload.messageText,
+        signatureCreationTime
+      };
+
+      payloadDisplay.textContent =
+        "Subject (unsigned): " + (details.subject || "(none)") +
+        "\n\nEXACT SIGNED MIME PAYLOAD:\n" +
+        pending.messageText;
+
+      canvas.style.display = "block";
+      exportButton.disabled = false;
+
+      status.textContent =
+        "Current draft QR ready — " +
+        payload.byteLength +
+        " signed MIME bytes. Review on Keycard Shell. " +
+        "Changing the draft requires a new signing request.";
+
+      console.log("[ShellPGP v0.6] Draft signing QR ready", {
+        messageBytes: payload.byteLength,
+        signatureCreationTime
+      });
+
+    } catch (error) {
+      payloadDisplay.textContent =
+        "No valid signing payload available.";
+
+      status.textContent =
+        "DRAFT SIGNING FAILED: " + error.message;
+
+      console.error("[ShellPGP v0.6]", error.message);
+    } finally {
+      generateButton.disabled = false;
+    }
+  });
+
+
+  // The response must match the exact draft signing request.
+  const responseInput = document.createElement("textarea");
+  responseInput.rows = 4;
+  responseInput.placeholder = "Paste fresh Keycard Shell UR:BYTES response...";
+  responseInput.style.width = "100%";
+  responseInput.style.marginTop = "16px";
+
+  const exportButton = document.createElement("button");
+  exportButton.textContent = "Verify & Export Current Draft (.eml)";
+  exportButton.style.padding = "12px 18px";
+  exportButton.disabled = true;
+
+  function formatAddress(value, label) {
+    if (typeof value === "string") {
+      return value;
+    }
+
+    if (
+      value &&
+      typeof value === "object" &&
+      (value.type === undefined || value.type === "address") &&
+      typeof value.email === "string"
+    ) {
+      return value.name
+        ? `${value.name} <${value.email}>`
+        : value.email;
+    }
+
+    throw new Error(`Unsupported ${label} address format`);
+  }
+
+  async function assertDraftUnchanged(protocol, original) {
+    const current = await readCurrentDraft(protocol);
+
+    const sameBytes =
+      current.payload.messageBytes.length ===
+        original.messageBytes.length &&
+      current.payload.messageBytes.every(
+        (byte, index) => byte === original.messageBytes[index]
+      );
+
+    if (
+      current.snapshot !== original.snapshot ||
+      !sameBytes
+    ) {
+      pending = null;
+      exportButton.disabled = true;
+
+      throw new Error(
+        "Thunderbird draft changed after QR generation. " +
+        "Generate a new signing request."
+      );
+    }
+
+    return current;
+  }
+
+  exportButton.addEventListener("click", async () => {
+    if (!pending) {
+      status.textContent = "Generate a draft signing QR first.";
+      return;
+    }
+
+    const original = pending;
+
+    generateButton.disabled = true;
+    exportButton.disabled = true;
+    status.textContent = "Checking draft and verifying hardware signature...";
+
+    try {
+      const protocol = await ShellPGPProtocol.loadProtocol();
+
+      // First check: the current draft must match the QR request.
+      const current = await assertDraftUnchanged(protocol, original);
+
+      // Reject metadata that this prototype cannot preserve in
+      // the exported message.
+      for (const field of ["cc", "bcc", "replyTo"]) {
+        if ((current.details[field] ?? []).length !== 0) {
+          throw new Error(
+            `${field} is not supported by v0.6 export`
+          );
+        }
+      }
+
+      const responseText = responseInput.value.trim();
+
+      if (!responseText) {
+        throw new Error("Paste the fresh hardware response first");
+      }
+
+      const decoded = protocol.decodeSignResponse(responseText);
+
+      const certificateResponse = await fetch(
+        browser.runtime.getURL("fixtures/keycard-test-cert.pgp")
+      );
+
+      if (!certificateResponse.ok) {
+        throw new Error("Test signing certificate unavailable");
+      }
+
+      const certificateBytes = new Uint8Array(
+        await certificateResponse.arrayBuffer()
+      );
+
+      const recipients = current.details.to ?? [];
+
+      if (!Array.isArray(recipients)) {
+        throw new Error("Unsupported To recipient format");
+      }
+
+      // The exporter independently verifies the signature
+      // against the exact bytes used to generate the QR.
+      const result = await ShellPGPVerifier.createSignedComposeEmail({
+        messageBytes: original.messageBytes,
+        signatureBytes: decoded.signatureBytes,
+        certificateBytes,
+        expectedSignatureCreationTime:
+          original.signatureCreationTime,
+        subject: current.details.subject ?? "",
+        from: formatAddress(current.details.from, "From"),
+        to: recipients.map(value =>
+          formatAddress(value, "To")
+        )
+      });
+
+      // Second check: reject edits made during async verification.
+      await assertDraftUnchanged(protocol, original);
+
+      const blob = new Blob([result.eml], {
+        type: "message/rfc822"
+      });
+
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+
+      link.href = url;
+      link.download = "shellpgp-v06-signed-compose.eml";
+
+      document.body.append(link);
+      link.click();
+      link.remove();
+
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
+
+      status.textContent =
+        "SIGNED DRAFT EXPORT: PASS — " +
+        result.messageBytes +
+        " bytes, signer " +
+        result.fingerprint;
+
+      console.log(
+        "[ShellPGP v0.6] Draft signature verified; EML exported"
+      );
+
+    } catch (error) {
+      status.textContent =
+        "DRAFT EXPORT FAILED: " + error.message;
+
+      console.error(
+        "[ShellPGP v0.6] Export failed:",
+        error.message
+      );
+    } finally {
+      generateButton.disabled = false;
+      exportButton.disabled = !pending;
+    }
+  });
+
+  section.append(
+    heading,
+    description,
+    warning,
+    payloadDisplay,
+    generateButton,
+    status,
+    canvas,
+    responseInput,
+    exportButton
+  );
+
+  document.body.append(section);
+})();

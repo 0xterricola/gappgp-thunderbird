@@ -20,7 +20,7 @@ The demonstrated workflow keeps private signing keys on Keycard hardware.
 
 ShellPGP generates signing requests and processes detached OpenPGP signatures. It does not require importing the private signing key into Thunderbird.
 
-The extension verifies the hardware-generated signature before exporting the supported test message.
+The extension verifies hardware-generated signatures before exporting supported test messages, including short plain-text compose drafts in the experimental v0.6 branch.
 
 ## Signature Verification
 
