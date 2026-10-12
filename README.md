@@ -8,7 +8,7 @@ Experimental Thunderbird MailExtension for hardware-backed OpenPGP signing using
 
 ShellPGP v0.5 demonstrates interoperability between Keycard Shell hardware-generated OpenPGP signatures and Thunderbird's native OpenPGP verification.
 
-The current demonstration uses a fixed 73-byte MIME test fixture. It does not sign arbitrary Thunderbird compose messages.
+The published v0.5 checkpoint uses a fixed 73-byte MIME fixture. The experimental v0.6 branch additionally signs newly composed, short plain-text Thunderbird messages.
 
 ## Verified Milestones
 
@@ -29,7 +29,39 @@ Thunderbird -> ShellPGP signing QR -> Keycard Shell hardware approval -> respons
 
 The return path currently uses manual paste because live camera access is blocked in the tested Thunderbird environment.
 
-The exported message is a controlled historical signing fixture, not the user's current compose draft.
+The v0.5 exporter remains fixture-only. The separate v0.6 workflow signs the actual draft's MIME body, verifies its hardware signature, checks for draft changes, and exports a signed email without sending it.
+
+## v0.6 Development Checkpoint
+
+Branch: `feat/shellpgp-v06-compose-signing`
+
+- Reads an actual Thunderbird plain-text compose draft.
+- Serializes the MIME body with canonical CRLF line endings.
+- Generates a Keycard Shell signing QR from the draft bytes.
+- Verifies a fresh physical Keycard Shell signature using OpenPGP.js.
+- Requires the draft to remain unchanged between QR generation and export.
+- Rejects modified messages, invalid signatures, and timestamp mismatches.
+- Exports the newly signed draft as a PGP/MIME `.eml`.
+- Preserves a second hardware test vector with a 72-byte signed message.
+- Passes 21 automated regression tests.
+
+**Manual interoperability demonstration:** A newly authored Thunderbird
+message was signed on physical Keycard Shell hardware, verified locally,
+and exported successfully.
+
+Thunderbird recognized the OpenPGP signature but reported
+**Uncertain Digital Signature** because the Gmail sender address did not
+match the public test certificate's email identity.
+
+Only the MIME body is signed. The From, To, Subject, and Date headers
+are not cryptographically covered.
+
+The return QR is currently decoded using an external camera workflow
+and pasted into the extension because Thunderbird camera access remains
+blocked in the tested environment.
+
+This is an experimental development checkpoint, not a production release
+or native Thunderbird sending implementation.
 
 ## Development
 
@@ -53,12 +85,12 @@ The regression suite tests decoding, cryptographic verification, tamper rejectio
 
 ## Current Limitations
 
-- No arbitrary Thunderbird compose-message signing.
+- v0.6 supports short ASCII plain-text drafts only; general HTML, attachment, and long-message signing remain unsupported.
 - No attachment signing.
 - No native Thunderbird sending integration.
 - No live camera capture in the tested Thunderbird/macOS configuration.
 - Current physical signing demonstration supports messages up to 104 bytes.
-- Fixed-fixture export only.
+- v0.5 export remains fixture-only; the v0.6 development branch supports short real-draft export.
 - Signed messages are not encrypted.
 - No independent security audit.
 

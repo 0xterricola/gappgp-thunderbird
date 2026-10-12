@@ -20,6 +20,7 @@ var ShellPGPVerifier = (() => {
   // src/verification/browser-entry.js
   var browser_entry_exports = {};
   __export(browser_entry_exports, {
+    createSignedComposeEmail: () => createSignedComposeEmail,
     createSignedFixtureEmail: () => createSignedFixtureEmail,
     verifyHardwareSignature: () => verifyHardwareSignature
   });
@@ -9177,6 +9178,114 @@ Content-Transfer-Encoding: 7bit\r
       eml,
       fingerprint: verification.fingerprint,
       keyID: verification.keyID
+    };
+  }
+  function safeComposeHeader(value, label, required = false) {
+    if (typeof value !== "string" || value.length > 180) {
+      throw new Error(`Invalid ${label} header`);
+    }
+    if (/[^\x20-\x7e]/.test(value)) {
+      throw new Error(`${label} must be single-line ASCII`);
+    }
+    const cleaned = value.trim();
+    if (required && !cleaned) {
+      throw new Error(`${label} is required`);
+    }
+    return cleaned;
+  }
+  async function createSignedComposeEmail({
+    messageBytes,
+    signatureBytes,
+    certificateBytes,
+    expectedSignatureCreationTime,
+    subject,
+    from,
+    to: to2
+  }) {
+    const mimePrefix = "Content-Type: text/plain; charset=us-ascii\r\n\r\n";
+    if (!(messageBytes instanceof Uint8Array)) {
+      throw new Error("Invalid compose MIME bytes");
+    }
+    const mimeText = new TextDecoder("utf-8", {
+      fatal: true
+    }).decode(messageBytes);
+    if (!mimeText.startsWith(mimePrefix) || !mimeText.endsWith("\r\n") || /(?<!\r)\n/.test(mimeText)) {
+      throw new Error("Unsupported MIME signing payload");
+    }
+    if (!Number.isInteger(expectedSignatureCreationTime) || expectedSignatureCreationTime <= 0) {
+      throw new Error("Invalid expected signature timestamp");
+    }
+    const safeSubject = safeComposeHeader(
+      subject ?? "",
+      "Subject"
+    );
+    const safeFrom = safeComposeHeader(
+      from,
+      "From",
+      true
+    );
+    if (!Array.isArray(to2) || !to2.every((recipient) => typeof recipient === "string")) {
+      throw new Error("Unsupported recipient format");
+    }
+    const safeRecipients = to2.map(
+      (recipient) => safeComposeHeader(recipient, "To", true)
+    );
+    const verification = await verifyHardwareSignature({
+      messageBytes,
+      signatureBytes,
+      certificateBytes
+    });
+    if (!verification.verified) {
+      throw new Error("Hardware signature is not verified");
+    }
+    const signature = await va({
+      binarySignature: signatureBytes
+    });
+    const created = signature.packets?.[0]?.created;
+    if (!(created instanceof Date) || !Number.isFinite(created.getTime())) {
+      throw new Error("Invalid signature creation timestamp");
+    }
+    const actualCreationTime = Math.floor(
+      created.getTime() / 1e3
+    );
+    if (actualCreationTime !== expectedSignatureCreationTime) {
+      throw new Error(
+        "Signature timestamp does not match the signing request"
+      );
+    }
+    const boundary = "shellpgp-compose-v06";
+    if (mimeText.includes("\r\n--" + boundary)) {
+      throw new Error("MIME boundary collision");
+    }
+    const armor = signature.armor().replace(/\r?\n/g, "\r\n").trimEnd() + "\r\n";
+    const headers = [
+      `From: ${safeFrom}`,
+      ...safeRecipients.length ? [`To: ${safeRecipients.join(", ")}`] : [],
+      `Subject: ${safeSubject}`,
+      `Date: ${created.toUTCString()}`,
+      "MIME-Version: 1.0",
+      "X-ShellPGP-Prototype: v0.6-compose-export",
+      `Content-Type: multipart/signed; protocol="application/pgp-signature"; micalg=pgp-sha256; boundary="${boundary}"`
+    ];
+    const eml = headers.join("\r\n") + `\r
+\r
+--${boundary}\r
+` + mimeText + `\r
+--${boundary}\r
+Content-Type: application/pgp-signature; name="signature.asc"\r
+Content-Description: OpenPGP digital signature\r
+Content-Disposition: attachment; filename="signature.asc"\r
+Content-Transfer-Encoding: 7bit\r
+\r
+` + armor + `--${boundary}--\r
+`;
+    return {
+      eml,
+      verified: true,
+      fingerprint: verification.fingerprint,
+      keyID: verification.keyID,
+      messageBytes: messageBytes.length,
+      signatureCreationTime: actualCreationTime
     };
   }
   return __toCommonJS(browser_entry_exports);

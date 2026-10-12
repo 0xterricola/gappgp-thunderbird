@@ -7,6 +7,7 @@ ShellPGP is an experimental local Thunderbird MailExtension.
 - Signing requests are generated locally.
 - QR codes are rendered locally.
 - The signing preview may read Thunderbird compose details.
+- The v0.6 signing workflow temporarily retains draft bytes and compose metadata in memory to detect changes before export.
 - Manual signature responses are processed inside the extension.
 - Signature verification and signed MIME export run locally.
 - The experimental camera scanner processes frames locally when camera access is available.
