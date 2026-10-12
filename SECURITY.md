@@ -47,3 +47,14 @@ The generated test email is signed but not encrypted.
 ## Audit Status
 
 No formal security audit, penetration test, or independent security assessment has been performed.
+
+## v0.7 Identity Handling
+
+The identity-aware compose workflow requires an approved certificate
+fingerprint and verifies the certificate's certified email against
+the Thunderbird sender. Signing keys remain on Keycard hardware.
+
+A valid signature or matching User ID does not independently
+establish real-world identity or email-account ownership.
+
+The implementation is experimental and has not been audited.

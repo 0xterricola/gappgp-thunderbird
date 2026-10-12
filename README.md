@@ -8,7 +8,7 @@ Experimental Thunderbird MailExtension for hardware-backed OpenPGP signing using
 
 ShellPGP v0.5 demonstrates interoperability between Keycard Shell hardware-generated OpenPGP signatures and Thunderbird's native OpenPGP verification.
 
-The published v0.5 checkpoint uses a fixed 73-byte MIME fixture. The experimental v0.6 branch additionally signs newly composed, short plain-text Thunderbird messages.
+The published v0.5 checkpoint uses a fixed 73-byte MIME fixture. The merged v0.6 milestone additionally signs newly composed, short plain-text Thunderbird messages.
 
 ## Verified Milestones
 
@@ -62,6 +62,52 @@ blocked in the tested environment.
 
 This is an experimental development checkpoint, not a production release
 or native Thunderbird sending implementation.
+
+
+## v0.7 — Sender Identity Integration
+
+**Status:** Experimental hardware-tested development checkpoint.
+
+ShellPGP v0.7 extends real Thunderbird compose signing with
+sender-aware OpenPGP certificate selection.
+
+Demonstrated capabilities:
+
+- Provision a self-certified OpenPGP identity using Keycard Shell.
+- Independently verify the certificate with GnuPG.
+- Select a public certificate in Thunderbird's ShellPGP preview.
+- Require an explicitly approved certificate fingerprint.
+- Verify that the certified email matches the Thunderbird sender.
+- Derive the signing-key creation timestamp from the certificate.
+- Generate a fresh signing QR for the current Thunderbird draft.
+- Approve signing using physical Keycard Shell hardware.
+- Verify the returned detached OpenPGP signature.
+- Reject unapproved certificates and sender mismatches.
+- Invalidate pending signing requests when identity selection changes.
+- Export a signed PGP/MIME email.
+
+**Physical hardware result:** A newly composed 76-byte MIME
+message was signed using Keycard Shell hardware and exported.
+
+Thunderbird independently displayed **Good Digital Signature**
+with the expected sender-matched signing key.
+
+Thunderbird indicated that the signing key was accepted, but
+its real-world ownership had not been independently verified.
+
+The message was signed, not encrypted, and was exported
+locally rather than sent.
+
+The personal certificate and hardware-response QR used for
+this demonstration are intentionally excluded from the repository.
+The public regression suite uses the existing test certificate.
+
+Current constraints include the 104-byte MIME signing limit,
+ASCII plain-text only, manual QR-response transfer, and no
+native Thunderbird sending integration.
+
+This milestone is not an independent security audit or
+production release.
 
 ## Development
 

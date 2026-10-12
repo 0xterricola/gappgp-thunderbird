@@ -32,3 +32,16 @@ The project has not undergone an independent privacy review.
 Thunderbird and macOS may maintain diagnostic logs and camera-permission records.
 
 The current implementation does not provide encrypted email or anonymity guarantees.
+
+## v0.7 Local Certificate Selection
+
+The sender-specific public OpenPGP certificate is selected locally
+using a Thunderbird file picker. The certificate and its identifying
+User ID are processed in the extension for signing validation.
+
+The personal demonstration certificate, QR capture, and email
+screenshots are not included in the public repository.
+
+OpenPGP public keys and User IDs may expose identifying information.
+Keys derived from secp256k1 material may also be linkable to
+Ethereum identities.

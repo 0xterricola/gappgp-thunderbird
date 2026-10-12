@@ -55,6 +55,43 @@ The signature authenticates the MIME body relative to the signing key.
 It does not authenticate unsigned email headers or establish that
 the signing key belongs to the claimed sender.
 
+
+## v0.7 Sender Identity Security Review
+
+The v0.7 workflow introduces explicit public-certificate selection.
+
+Security checks:
+
+- Require an explicitly approved 40-character certificate fingerprint.
+- Compare the imported certificate with the approved fingerprint.
+- Validate the OpenPGP primary key and User ID self-certification.
+- Require the certified email address to match the compose sender.
+- Reject malformed sender addresses and header injection.
+- Use the selected certificate for hardware signature verification.
+- Derive the OpenPGP key creation timestamp from that certificate.
+- Preserve the existing draft-change and signature-timestamp checks.
+- Invalidate pending signing requests when certificate selection changes.
+
+The signing private key remains on Keycard hardware during the
+demonstrated workflow.
+
+A self-certified OpenPGP User ID is not independent proof that
+the key owner controls the claimed email address.
+
+The exported PGP/MIME signature covers the MIME body, not the
+RFC 5322 From, To, Subject, or Date headers.
+
+secp256k1 OpenPGP signing identities may also be linkable to
+Ethereum addresses derived from the same underlying public key.
+
+OpenPGP.js uses a scoped compatibility configuration for
+secp256k1 while preserving its other configured restrictions.
+
+Manual hardware testing confirmed that Thunderbird recognized
+a valid sender-matched OpenPGP signature.
+
+This implementation has not undergone an independent audit.
+
 ## Cryptographic Compatibility
 
 The test certificate uses secp256k1 ECDSA with SHA-256.
