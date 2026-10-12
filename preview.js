@@ -329,3 +329,177 @@ window.testShellPGPProtocol = async function () {
 
   document.body.append(section);
 })();
+
+// ShellPGP v0.5 — Camera-independent hardware signature verification.
+
+(function initializeSignatureVerification() {
+  const section = document.createElement("section");
+  section.style.marginTop = "28px";
+
+  const heading = document.createElement("h2");
+  heading.textContent = "Verify Hardware Signature";
+
+  const description = document.createElement("p");
+  description.textContent =
+    "Paste a Keycard Shell UR:BYTES signature response. " +
+    "Verification uses the fixed 73-byte MIME test fixture, " +
+    "not the current Thunderbird draft.";
+
+  const input = document.createElement("textarea");
+  input.placeholder = "ur:bytes/...";
+  input.rows = 4;
+  input.style.width = "100%";
+
+  const button = document.createElement("button");
+  button.textContent = "Verify Signature";
+  button.style.padding = "12px 18px";
+
+  const status = document.createElement("p");
+  status.setAttribute("role", "status");
+  status.textContent = "No signature verified.";
+
+  input.addEventListener("input", () => {
+    status.textContent = "Unverified response.";
+  });
+
+  button.addEventListener("click", async () => {
+    button.disabled = true;
+    status.textContent = "Verifying hardware signature...";
+
+    try {
+      const protocol = await ShellPGPProtocol.loadProtocol();
+
+      const decoded = protocol.decodeSignResponse(
+        input.value.trim()
+      );
+
+      const fixture =
+        "Content-Type: text/plain; charset=us-ascii\r\n" +
+        "\r\n" +
+        "Hello from Keycard Shell.\r\n";
+
+      const messageBytes = new TextEncoder().encode(fixture);
+
+      if (messageBytes.length !== 73) {
+        throw new Error("Unexpected MIME fixture length");
+      }
+
+      const certificateResponse = await fetch(
+        browser.runtime.getURL("fixtures/keycard-test-cert.pgp")
+      );
+
+      if (!certificateResponse.ok) {
+        throw new Error("Could not load test certificate");
+      }
+
+      const certificateBytes = new Uint8Array(
+        await certificateResponse.arrayBuffer()
+      );
+
+      const result = await ShellPGPVerifier.verifyHardwareSignature({
+        messageBytes,
+        signatureBytes: decoded.signatureBytes,
+        certificateBytes
+      });
+
+      status.textContent =
+        "CRYPTOGRAPHIC VERIFICATION: PASS — " +
+        result.fingerprint +
+        " (fixed MIME test fixture only)";
+
+      console.log("[ShellPGP] Cryptographic verification PASS");
+
+    } catch (error) {
+      status.textContent =
+        "VERIFICATION FAILED: " + error.message;
+
+      console.error("[ShellPGP] Verification failed:", error.message);
+    } finally {
+      button.disabled = false;
+    }
+  });
+
+  const exportButton = document.createElement("button");
+  exportButton.textContent = "Export Signed Test Email (.eml)";
+  exportButton.style.padding = "12px 18px";
+  exportButton.style.marginLeft = "8px";
+
+  exportButton.addEventListener("click", async () => {
+    exportButton.disabled = true;
+    status.textContent = "Verifying and exporting signed email...";
+
+    try {
+      const protocol = await ShellPGPProtocol.loadProtocol();
+
+      const decoded = protocol.decodeSignResponse(
+        input.value.trim()
+      );
+
+      const fixture =
+        "Content-Type: text/plain; charset=us-ascii\r\n" +
+        "\r\n" +
+        "Hello from Keycard Shell.\r\n";
+
+      const messageBytes = new TextEncoder().encode(fixture);
+
+      const response = await fetch(
+        browser.runtime.getURL("fixtures/keycard-test-cert.pgp")
+      );
+
+      if (!response.ok) {
+        throw new Error("Test certificate unavailable");
+      }
+
+      const certificateBytes = new Uint8Array(
+        await response.arrayBuffer()
+      );
+
+      const result = await ShellPGPVerifier.createSignedFixtureEmail({
+        messageBytes,
+        signatureBytes: decoded.signatureBytes,
+        certificateBytes
+      });
+
+      const blob = new Blob([result.eml], {
+        type: "message/rfc822"
+      });
+
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+
+      link.href = url;
+      link.download = "shellpgp-keycard-signed-test.eml";
+
+      document.body.append(link);
+      link.click();
+      link.remove();
+
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
+
+      status.textContent =
+        "Verified signed test email exported — " +
+        result.fingerprint;
+
+      console.log("[ShellPGP] Signed PGP/MIME export: PASS");
+
+    } catch (error) {
+      status.textContent =
+        "EXPORT FAILED: " + error.message;
+
+      console.error("[ShellPGP] Export failed", error);
+    } finally {
+      exportButton.disabled = false;
+    }
+  });
+
+  section.append(
+    heading,
+    description,
+    input,
+    button,
+    exportButton,
+    status
+  );
+
+  document.body.append(section);
+})();

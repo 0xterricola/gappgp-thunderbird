@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "main": "background.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "node --test tests/*.test.mjs"
   },
   "keywords": [],
   "author": "",
@@ -14,9 +14,11 @@
     "buffer": "^6.0.3",
     "cbor2": "^2.3.0",
     "jsqr": "^1.4.0",
+    "openpgp": "^6.3.2",
     "qrcode": "^1.5.4"
   },
   "devDependencies": {
+    "eckey-utils": "^0.7.14",
     "esbuild": "^0.28.2",
     "jsdom": "^29.1.1"
   }

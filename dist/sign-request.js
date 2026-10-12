@@ -14969,7 +14969,7 @@ ${O3.repeat(r2.depth)}}` : r2.close = "}";
       var errors_1 = require_errors();
       var ur_1 = __importDefault(require_ur());
       var fountainEncoder_1 = require_fountainEncoder();
-      var URDecoder2 = class _URDecoder {
+      var URDecoder3 = class _URDecoder {
         constructor(fountainDecoder = new fountainDecoder_1.default(), type = "bytes") {
           this.fountainDecoder = fountainDecoder;
           this.type = type;
@@ -15092,7 +15092,7 @@ ${O3.repeat(r2.depth)}}` : r2.close = "}";
           return this.fountainDecoder.getProgress();
         }
       };
-      exports.default = URDecoder2;
+      exports.default = URDecoder3;
     }
   });
 
@@ -15114,10 +15114,139 @@ ${O3.repeat(r2.depth)}}` : r2.close = "}";
     }
   });
 
+  // src/protocol/sign-response.js
+  function parseSignaturePacket(data) {
+    if (data.length < 2) {
+      throw new Error("Truncated OpenPGP packet");
+    }
+    let offset = 0;
+    const ctb = data[offset++];
+    if ((ctb & 128) === 0) {
+      throw new Error("Invalid OpenPGP packet header");
+    }
+    let tag;
+    let length;
+    if (ctb & 64) {
+      tag = ctb & 63;
+      const first = data[offset++];
+      if (first === void 0) {
+        throw new Error("Missing packet length");
+      }
+      if (first < 192) {
+        length = first;
+      } else if (first <= 223) {
+        if (offset >= data.length) {
+          throw new Error("Truncated packet length");
+        }
+        length = (first - 192 << 8) + data[offset++] + 192;
+      } else if (first === 255) {
+        if (offset + 4 > data.length) {
+          throw new Error("Truncated packet length");
+        }
+        length = new DataView(
+          data.buffer,
+          data.byteOffset + offset,
+          4
+        ).getUint32(0, false);
+        offset += 4;
+      } else {
+        throw new Error("Partial packet lengths unsupported");
+      }
+    } else {
+      tag = ctb >> 2 & 15;
+      const lengthType = ctb & 3;
+      if (lengthType === 0) {
+        if (offset >= data.length) throw new Error("Truncated length");
+        length = data[offset++];
+      } else if (lengthType === 1) {
+        if (offset + 2 > data.length) throw new Error("Truncated length");
+        length = data[offset] << 8 | data[offset + 1];
+        offset += 2;
+      } else if (lengthType === 2) {
+        if (offset + 4 > data.length) throw new Error("Truncated length");
+        length = new DataView(
+          data.buffer,
+          data.byteOffset + offset,
+          4
+        ).getUint32(0, false);
+        offset += 4;
+      } else {
+        throw new Error("Indeterminate packet length unsupported");
+      }
+    }
+    if (offset + length !== data.length) {
+      throw new Error("Invalid OpenPGP packet length");
+    }
+    const body = data.subarray(offset);
+    if (tag !== 2 || body.length < 6) {
+      throw new Error("Expected an OpenPGP signature packet");
+    }
+    if (body[0] !== 4) {
+      throw new Error("Expected OpenPGP v4 signature");
+    }
+    if (body[1] !== 1) {
+      throw new Error("Expected canonical-text signature");
+    }
+    if (body[2] !== 19) {
+      throw new Error("Expected ECDSA signature");
+    }
+    if (body[3] !== 8) {
+      throw new Error("Expected SHA-256 signature");
+    }
+    return {
+      tag,
+      version: body[0],
+      signatureType: body[1],
+      publicKeyAlgorithm: body[2],
+      hashAlgorithm: body[3]
+    };
+  }
+  function decodeSignResponse(input) {
+    if (typeof input !== "string" || input.length > 65536) {
+      throw new Error("Invalid or oversized UR input");
+    }
+    const parts = input.trim().split(/\s+/).filter(Boolean);
+    if (parts.length === 0 || parts.length > 128) {
+      throw new Error("Invalid number of UR fragments");
+    }
+    const decoder = new import_bc_ur.URDecoder();
+    for (const part of parts) {
+      if (!/^ur:bytes\//i.test(part)) {
+        throw new Error("Expected UR:BYTES response");
+      }
+      decoder.receivePart(part);
+      if (decoder.isComplete()) break;
+    }
+    if (!decoder.isComplete() || !decoder.isSuccess()) {
+      throw new Error("Incomplete or invalid UR response");
+    }
+    const ur = decoder.resultUR();
+    if (ur.type !== "bytes") {
+      throw new Error("Unexpected UR type");
+    }
+    const signatureBytes = Uint8Array.from(ur.decodeCBOR());
+    if (signatureBytes.length > 8192) {
+      throw new Error("Oversized signature packet");
+    }
+    const packet = parseSignaturePacket(signatureBytes);
+    return {
+      signatureBytes,
+      packet,
+      receivedFragments: parts.length
+    };
+  }
+  var import_bc_ur;
+  var init_sign_response = __esm({
+    "src/protocol/sign-response.js"() {
+      import_bc_ur = __toESM(require_dist());
+    }
+  });
+
   // src/protocol/sign-request.js
   var sign_request_exports = {};
   __export(sign_request_exports, {
-    createSignRequest: () => createSignRequest
+    createSignRequest: () => createSignRequest,
+    decodeSignResponse: () => decodeSignResponse
   });
   function createSignRequest(messageText, keyCreationTime, signatureCreationTime, maxBytes = 104) {
     const message = new TextEncoder().encode(messageText);
@@ -15156,10 +15285,10 @@ ${O3.repeat(r2.depth)}}` : r2.close = "}";
       [4, keyCreationTime],
       [5, signatureCreationTime]
     ]));
-    const ur = import_bc_ur.UR.fromBuffer(import_buffer.Buffer.from(innerCbor));
-    const encoder = new import_bc_ur.UREncoder(ur, 400, 0);
+    const ur = import_bc_ur2.UR.fromBuffer(import_buffer.Buffer.from(innerCbor));
+    const encoder = new import_bc_ur2.UREncoder(ur, 400, 0);
     const urText = encoder.nextPart();
-    const decoder = new import_bc_ur.URDecoder();
+    const decoder = new import_bc_ur2.URDecoder();
     decoder.receivePart(urText);
     if (!decoder.isComplete() || !decoder.isSuccess()) {
       throw new Error("UR round-trip validation failed");
@@ -15179,12 +15308,13 @@ ${O3.repeat(r2.depth)}}` : r2.close = "}";
       signatureCreationTime
     };
   }
-  var import_buffer, import_bc_ur, VERSION, SIGN_MESSAGE;
+  var import_buffer, import_bc_ur2, VERSION, SIGN_MESSAGE;
   var init_sign_request = __esm({
     "src/protocol/sign-request.js"() {
       import_buffer = __toESM(require_buffer());
       init_lib2();
-      import_bc_ur = __toESM(require_dist());
+      import_bc_ur2 = __toESM(require_dist());
+      init_sign_response();
       VERSION = 1;
       SIGN_MESSAGE = 2;
     }

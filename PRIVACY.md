@@ -1,20 +1,33 @@
 # Privacy
 
-ShellPGP is an experimental local Thunderbird extension.
+ShellPGP is an experimental local Thunderbird MailExtension.
 
 ## Current Behavior
 
 - Signing requests are generated locally.
 - QR codes are rendered locally.
-- The experimental camera scanner processes frames locally.
-- The scanner requests camera access only after user interaction.
+- The signing preview may read Thunderbird compose details.
+- Manual signature responses are processed inside the extension.
+- Signature verification and signed MIME export run locally.
+- The experimental camera scanner processes frames locally when camera access is available.
+- Camera access is requested only following user interaction.
 - Camera tracks are stopped after capture or when the page closes.
-- The extension does not intentionally upload camera frames
-  or signing requests to a remote service.
+- The extension does not intentionally upload camera frames, signing requests, or signature responses to a remote service.
+
+## Public Test Fixtures
+
+The repository includes a public test certificate, fixed MIME message, detached signature, and UR:BYTES response.
+
+These materials are intended for reproducible interoperability testing.
+
+They contain public cryptographic material and test identity information, not private signing keys.
+
+Do not replace them with real private messages or sensitive personal data.
 
 ## Limitations
 
 The project has not undergone an independent privacy review.
 
-Thunderbird and macOS may maintain their own diagnostic logs
-and camera-permission records.
+Thunderbird and macOS may maintain diagnostic logs and camera-permission records.
+
+The current implementation does not provide encrypted email or anonymity guarantees.

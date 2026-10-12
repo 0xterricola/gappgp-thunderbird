@@ -93,3 +93,5 @@ export function createSignRequest(
     signatureCreationTime,
   };
 }
+
+export { decodeSignResponse } from "./sign-response.js";
