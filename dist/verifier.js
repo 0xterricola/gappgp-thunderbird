@@ -22,6 +22,7 @@ var ShellPGPVerifier = (() => {
   __export(browser_entry_exports, {
     createSignedComposeEmail: () => createSignedComposeEmail,
     createSignedFixtureEmail: () => createSignedFixtureEmail,
+    validateSenderIdentity: () => validateSenderIdentity,
     verifyHardwareSignature: () => verifyHardwareSignature
   });
 
@@ -9066,12 +9067,93 @@ var ShellPGPVerifier = (() => {
   })();
   var Wy = /* @__PURE__ */ t({ __proto__: null, default: /* @__PURE__ */ Zy(Jy) }, [Jy]);
 
+  // src/verification/sender-identity.js
+  var MAX_CERTIFICATE_BYTES = 65536;
+  function extractMailbox(value) {
+    if (typeof value !== "string") {
+      throw new Error("Sender address must be a string");
+    }
+    const text = value.trim();
+    const match = text.match(/<([^<>]+)>$/);
+    const address = match ? match[1] : text;
+    if (!/^[^\s<>@,]+@[^\s<>@,]+$/.test(address) || /[\r\n]/.test(text)) {
+      throw new Error("Invalid sender email address");
+    }
+    return address.toLowerCase();
+  }
+  async function validateSenderIdentity({
+    certificateBytes,
+    expectedFingerprint,
+    from
+  }) {
+    if (!(certificateBytes instanceof Uint8Array) || certificateBytes.length === 0 || certificateBytes.length > MAX_CERTIFICATE_BYTES) {
+      throw new Error("Invalid public certificate");
+    }
+    const approvedFingerprint = String(
+      expectedFingerprint ?? ""
+    ).replace(/\s/g, "").toUpperCase();
+    if (!/^[0-9A-F]{40}$/.test(approvedFingerprint)) {
+      throw new Error("Explicit approved fingerprint required");
+    }
+    const config = {
+      ...F,
+      rejectCurves: new Set(
+        [...F.rejectCurves].filter(
+          (curve) => curve !== R.curve.secp256k1
+        )
+      )
+    };
+    const key = await Ja({
+      binaryKey: certificateBytes
+    });
+    const fingerprint = key.getFingerprint().toUpperCase();
+    if (fingerprint !== approvedFingerprint) {
+      throw new Error("Certificate fingerprint does not match approved identity");
+    }
+    const userIDs = key.getUserIDs();
+    if (userIDs.length !== 1) {
+      throw new Error("Expected exactly one certified User ID");
+    }
+    const certifiedEmail = extractMailbox(userIDs[0]);
+    const senderEmail = extractMailbox(from);
+    if (certifiedEmail !== senderEmail) {
+      throw new Error("Thunderbird sender does not match certificate User ID");
+    }
+    await key.verifyPrimaryKey(void 0, void 0, config);
+    const certifications = await key.verifyPrimaryUser(
+      void 0,
+      /* @__PURE__ */ new Date(),
+      void 0,
+      config
+    );
+    const primaryKeyID = key.getKeyID().toHex();
+    if (!certifications.some(
+      (certification) => certification.valid === true && certification.keyID.toHex() === primaryKeyID
+    )) {
+      throw new Error("Valid User ID self-certification not found");
+    }
+    const creationDate = key.getCreationTime();
+    const keyCreationTime = Math.floor(
+      creationDate.getTime() / 1e3
+    );
+    if (!Number.isInteger(keyCreationTime) || keyCreationTime <= 0 || keyCreationTime > 4294967295) {
+      throw new Error("Invalid OpenPGP key creation time");
+    }
+    return {
+      fingerprint,
+      userID: userIDs[0],
+      email: certifiedEmail,
+      keyCreationTime
+    };
+  }
+
   // src/verification/browser-entry.js
   var EXPECTED_FINGERPRINT = "07D8539F269583C160E333151763E15ED3E9286C";
   async function verifyHardwareSignature({
     messageBytes,
     signatureBytes,
-    certificateBytes
+    certificateBytes,
+    expectedFingerprint = EXPECTED_FINGERPRINT
   }) {
     if (!(messageBytes instanceof Uint8Array) || !(signatureBytes instanceof Uint8Array) || !(certificateBytes instanceof Uint8Array)) {
       throw new Error("Expected binary message, signature and certificate");
@@ -9086,7 +9168,13 @@ var ShellPGPVerifier = (() => {
       binaryKey: certificateBytes
     });
     const fingerprint = publicKey.getFingerprint().toUpperCase();
-    if (fingerprint !== EXPECTED_FINGERPRINT) {
+    const approvedFingerprint = String(
+      expectedFingerprint ?? ""
+    ).replace(/\s/g, "").toUpperCase();
+    if (!/^[0-9A-F]{40}$/.test(approvedFingerprint)) {
+      throw new Error("Invalid approved signing fingerprint");
+    }
+    if (fingerprint !== approvedFingerprint) {
       throw new Error("Unexpected signing certificate");
     }
     const signature = await va({
@@ -9197,6 +9285,7 @@ Content-Transfer-Encoding: 7bit\r
     messageBytes,
     signatureBytes,
     certificateBytes,
+    expectedFingerprint = EXPECTED_FINGERPRINT,
     expectedSignatureCreationTime,
     subject,
     from,
@@ -9230,10 +9319,16 @@ Content-Transfer-Encoding: 7bit\r
     const safeRecipients = to2.map(
       (recipient) => safeComposeHeader(recipient, "To", true)
     );
+    await validateSenderIdentity({
+      certificateBytes,
+      expectedFingerprint,
+      from: safeFrom
+    });
     const verification = await verifyHardwareSignature({
       messageBytes,
       signatureBytes,
-      certificateBytes
+      certificateBytes,
+      expectedFingerprint
     });
     if (!verification.verified) {
       throw new Error("Hardware signature is not verified");

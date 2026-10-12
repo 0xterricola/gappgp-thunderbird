@@ -45,11 +45,29 @@ ShellPGP remains an experimental proof of concept. v0.5 is fixture-only; the v0.
 - The signed MIME body does not cover From, To, Subject, or Date.
 - CC, BCC, and Reply-To are unsupported by the v0.6 exporter.
 - The current verification certificate is a fixed public test key.
-- General signing-key selection and identity provisioning are pending.
+- v0.7 adds manual certificate selection and identity provisioning; generalized identity management remains pending.
 - Thunderbird reports an identity mismatch when the sender's email
   address does not match the signing certificate.
 - The experimental v0.6 implementation has not been audited.
-- v0.6 has not been released or merged into main.
+- v0.6 is merged into main; v0.7 is an experimental development checkpoint.
+
+
+## v0.7 Additional Limitations
+
+- Certificate selection is manual and requires fingerprint approval.
+- The user must independently verify the intended hardware fingerprint.
+- The selected certificate must contain a matching certified email UID.
+- A matching UID does not independently prove email ownership.
+- The development workflow does not manage public-key trust.
+- Email headers remain outside the cryptographically signed MIME body.
+- Hardware signing remains limited to short ASCII plain-text payloads.
+- The current signing limit is 104 MIME bytes.
+- QR responses require external capture and manual paste.
+- Native sending and attachment signing remain unsupported.
+- The demonstrated email was exported, not transmitted.
+- The test does not establish encryption or confidentiality.
+- The sender-specific hardware certificate is not distributed publicly.
+- The implementation is experimental and unaudited.
 
 ## Upstream Issue
 

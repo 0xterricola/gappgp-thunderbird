@@ -512,7 +512,7 @@ window.testShellPGPProtocol = async function () {
   section.style.marginTop = "28px";
 
   const heading = document.createElement("h2");
-  heading.textContent = "ShellPGP v0.6 — Sign Current Draft";
+  heading.textContent = "ShellPGP v0.7 — Approved Identity Signing";
 
   const description = document.createElement("p");
   description.textContent =
@@ -529,6 +529,33 @@ window.testShellPGPProtocol = async function () {
   payloadDisplay.textContent = "No draft signing payload generated.";
   payloadDisplay.style.whiteSpace = "pre-wrap";
   payloadDisplay.style.overflowWrap = "anywhere";
+
+  const identityNotice = document.createElement("p");
+  identityNotice.textContent =
+    "Select the Keycard public certificate and enter its " +
+    "independently verified fingerprint. The certified email " +
+    "must match the Thunderbird sender.";
+
+  const certificateLabel = document.createElement("label");
+  certificateLabel.textContent = "Keycard public certificate: ";
+  certificateLabel.style.display = "block";
+
+  const certificateInput = document.createElement("input");
+  certificateInput.type = "file";
+  certificateInput.accept = ".pgp,.gpg";
+  certificateLabel.append(certificateInput);
+
+  const fingerprintLabel = document.createElement("label");
+  fingerprintLabel.textContent = "Approved Keycard fingerprint: ";
+  fingerprintLabel.style.display = "block";
+
+  const fingerprintInput = document.createElement("input");
+  fingerprintInput.type = "text";
+  fingerprintInput.placeholder = "40-character fingerprint";
+  fingerprintInput.autocomplete = "off";
+  fingerprintInput.spellcheck = false;
+  fingerprintInput.style.width = "100%";
+  fingerprintLabel.append(fingerprintInput);
 
   const generateButton = document.createElement("button");
   generateButton.textContent = "Generate Current Draft Signing QR";
@@ -549,6 +576,7 @@ window.testShellPGPProtocol = async function () {
   // A future response must be verified against these exact bytes,
   // followed by a fresh check of the Thunderbird draft.
   let pending = null;
+  let identityRevision = 0;
 
   async function readCurrentDraft(protocol) {
     if (!Number.isSafeInteger(tabId) || tabId <= 0) {
@@ -590,6 +618,7 @@ window.testShellPGPProtocol = async function () {
     canvas.style.display = "none";
     pending = null;
     exportButton.disabled = true;
+    responseInput.value = "";
     status.textContent = "Reading current Thunderbird draft...";
 
     try {
@@ -597,9 +626,32 @@ window.testShellPGPProtocol = async function () {
       const { details, payload, snapshot } =
         await readCurrentDraft(protocol);
 
-      // Test certificate's creation timestamp.
-      // This is NOT a general-purpose key-selection implementation.
-      const keyCreationTime = 1790822191;
+      const revision = identityRevision;
+      const selectedFile = certificateInput.files?.[0];
+
+      if (!selectedFile) {
+        throw new Error("Select a Keycard public certificate");
+      }
+
+      if (selectedFile.size === 0 || selectedFile.size > 65536) {
+        throw new Error("Unsupported public certificate size");
+      }
+
+      const requestedFingerprint = fingerprintInput.value
+        .replace(/\s/g, "")
+        .toUpperCase();
+
+      const certificateBytes = new Uint8Array(
+        await selectedFile.arrayBuffer()
+      );
+
+      const identity = await ShellPGPVerifier.validateSenderIdentity({
+        certificateBytes,
+        expectedFingerprint: requestedFingerprint,
+        from: formatAddress(details.from, "From")
+      });
+
+      const keyCreationTime = identity.keyCreationTime;
       const signatureCreationTime = Math.floor(Date.now() / 1000);
 
       const request = protocol.createSignRequest(
@@ -611,11 +663,23 @@ window.testShellPGPProtocol = async function () {
 
       await ShellPGPQR.renderQRCode(canvas, request.urText);
 
+      if (
+        identityRevision !== revision ||
+        certificateInput.files?.[0] !== selectedFile ||
+        fingerprintInput.value.replace(/\s/g, "").toUpperCase() !==
+          requestedFingerprint
+      ) {
+        throw new Error("Identity changed during QR generation");
+      }
+
       pending = {
         snapshot,
         messageBytes: Uint8Array.from(payload.messageBytes),
         messageText: payload.messageText,
-        signatureCreationTime
+        signatureCreationTime,
+        certificateBytes,
+        expectedFingerprint: identity.fingerprint,
+        identityRevision: revision
       };
 
       payloadDisplay.textContent =
@@ -632,7 +696,7 @@ window.testShellPGPProtocol = async function () {
         " signed MIME bytes. Review on Keycard Shell. " +
         "Changing the draft requires a new signing request.";
 
-      console.log("[ShellPGP v0.6] Draft signing QR ready", {
+      console.log("[ShellPGP v0.7] Draft signing QR ready", {
         messageBytes: payload.byteLength,
         signatureCreationTime
       });
@@ -644,7 +708,7 @@ window.testShellPGPProtocol = async function () {
       status.textContent =
         "DRAFT SIGNING FAILED: " + error.message;
 
-      console.error("[ShellPGP v0.6]", error.message);
+      console.error("[ShellPGP v0.7]", error.message);
     } finally {
       generateButton.disabled = false;
     }
@@ -662,6 +726,19 @@ window.testShellPGPProtocol = async function () {
   exportButton.textContent = "Verify & Export Current Draft (.eml)";
   exportButton.style.padding = "12px 18px";
   exportButton.disabled = true;
+
+  function invalidateIdentity() {
+    identityRevision++;
+    pending = null;
+    exportButton.disabled = true;
+    canvas.style.display = "none";
+    responseInput.value = "";
+    status.textContent =
+      "Identity changed. Generate a new signing QR.";
+  }
+
+  certificateInput.addEventListener("change", invalidateIdentity);
+  fingerprintInput.addEventListener("input", invalidateIdentity);
 
   function formatAddress(value, label) {
     if (typeof value === "string") {
@@ -726,6 +803,13 @@ window.testShellPGPProtocol = async function () {
       // First check: the current draft must match the QR request.
       const current = await assertDraftUnchanged(protocol, original);
 
+      if (
+        pending !== original ||
+        identityRevision !== original.identityRevision
+      ) {
+        throw new Error("Signing identity changed after QR generation");
+      }
+
       // Reject metadata that this prototype cannot preserve in
       // the exported message.
       for (const field of ["cc", "bcc", "replyTo"]) {
@@ -744,17 +828,7 @@ window.testShellPGPProtocol = async function () {
 
       const decoded = protocol.decodeSignResponse(responseText);
 
-      const certificateResponse = await fetch(
-        browser.runtime.getURL("fixtures/keycard-test-cert.pgp")
-      );
-
-      if (!certificateResponse.ok) {
-        throw new Error("Test signing certificate unavailable");
-      }
-
-      const certificateBytes = new Uint8Array(
-        await certificateResponse.arrayBuffer()
-      );
+      const certificateBytes = original.certificateBytes;
 
       const recipients = current.details.to ?? [];
 
@@ -768,6 +842,7 @@ window.testShellPGPProtocol = async function () {
         messageBytes: original.messageBytes,
         signatureBytes: decoded.signatureBytes,
         certificateBytes,
+        expectedFingerprint: original.expectedFingerprint,
         expectedSignatureCreationTime:
           original.signatureCreationTime,
         subject: current.details.subject ?? "",
@@ -780,6 +855,13 @@ window.testShellPGPProtocol = async function () {
       // Second check: reject edits made during async verification.
       await assertDraftUnchanged(protocol, original);
 
+      if (
+        pending !== original ||
+        identityRevision !== original.identityRevision
+      ) {
+        throw new Error("Signing identity changed during verification");
+      }
+
       const blob = new Blob([result.eml], {
         type: "message/rfc822"
       });
@@ -788,7 +870,7 @@ window.testShellPGPProtocol = async function () {
       const link = document.createElement("a");
 
       link.href = url;
-      link.download = "shellpgp-v06-signed-compose.eml";
+      link.download = "shellpgp-v07-signed-compose.eml";
 
       document.body.append(link);
       link.click();
@@ -803,7 +885,7 @@ window.testShellPGPProtocol = async function () {
         result.fingerprint;
 
       console.log(
-        "[ShellPGP v0.6] Draft signature verified; EML exported"
+        "[ShellPGP v0.7] Draft signature verified; EML exported"
       );
 
     } catch (error) {
@@ -811,7 +893,7 @@ window.testShellPGPProtocol = async function () {
         "DRAFT EXPORT FAILED: " + error.message;
 
       console.error(
-        "[ShellPGP v0.6] Export failed:",
+        "[ShellPGP v0.7] Export failed:",
         error.message
       );
     } finally {
@@ -825,6 +907,9 @@ window.testShellPGPProtocol = async function () {
     description,
     warning,
     payloadDisplay,
+    identityNotice,
+    certificateLabel,
+    fingerprintLabel,
     generateButton,
     status,
     canvas,

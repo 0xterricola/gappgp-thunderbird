@@ -1,4 +1,7 @@
 import * as openpgp from "openpgp";
+import { validateSenderIdentity } from "./sender-identity.js";
+
+export { validateSenderIdentity };
 
 const EXPECTED_FINGERPRINT =
   "07D8539F269583C160E333151763E15ED3E9286C";
@@ -6,7 +9,8 @@ const EXPECTED_FINGERPRINT =
 export async function verifyHardwareSignature({
   messageBytes,
   signatureBytes,
-  certificateBytes
+  certificateBytes,
+  expectedFingerprint = EXPECTED_FINGERPRINT
 }) {
   if (
     !(messageBytes instanceof Uint8Array) ||
@@ -36,7 +40,15 @@ export async function verifyHardwareSignature({
 
   const fingerprint = publicKey.getFingerprint().toUpperCase();
 
-  if (fingerprint !== EXPECTED_FINGERPRINT) {
+  const approvedFingerprint = String(
+    expectedFingerprint ?? ""
+  ).replace(/\s/g, "").toUpperCase();
+
+  if (!/^[0-9A-F]{40}$/.test(approvedFingerprint)) {
+    throw new Error("Invalid approved signing fingerprint");
+  }
+
+  if (fingerprint !== approvedFingerprint) {
     throw new Error("Unexpected signing certificate");
   }
 
@@ -201,6 +213,7 @@ export async function createSignedComposeEmail({
   messageBytes,
   signatureBytes,
   certificateBytes,
+  expectedFingerprint = EXPECTED_FINGERPRINT,
   expectedSignatureCreationTime,
   subject,
   from,
@@ -254,11 +267,19 @@ export async function createSignedComposeEmail({
     safeComposeHeader(recipient, "To", true)
   );
 
-  // Independently verify the exact MIME bytes first.
+  // Verify the certificate, its User ID, and sender alignment.
+  await validateSenderIdentity({
+    certificateBytes,
+    expectedFingerprint,
+    from: safeFrom
+  });
+
+  // Independently verify the exact MIME bytes.
   const verification = await verifyHardwareSignature({
     messageBytes,
     signatureBytes,
-    certificateBytes
+    certificateBytes,
+    expectedFingerprint
   });
 
   if (!verification.verified) {
