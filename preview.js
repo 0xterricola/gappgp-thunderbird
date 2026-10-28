@@ -44,12 +44,12 @@ window.testShellPGPProtocol = async function () {
     throw new Error("Invalid UR request");
   }
 
-  console.log("[ShellPGP] SIGN REQUEST: PASS", result);
+  console.log("[GapPGP] SIGN REQUEST: PASS", result);
 
   return result;
 };
 
-// ShellPGP v0.4 — Hardware QR signing fixture.
+// GapPGP v0.4 — Hardware QR signing fixture.
 // This does NOT sign or send the current Thunderbird draft.
 
 (function initializeSigningQR() {
@@ -126,7 +126,7 @@ window.testShellPGPProtocol = async function () {
         `QR ready. ${result.messageBytes} MIME bytes. ` +
         "Review the message on Keycard Shell before approving.";
 
-      console.log("[ShellPGP] Hardware signing QR generated", {
+      console.log("[GapPGP] Hardware signing QR generated", {
         messageBytes: result.messageBytes,
         keyCreationTime: result.keyCreationTime,
         signatureCreationTime: result.signatureCreationTime
@@ -134,14 +134,14 @@ window.testShellPGPProtocol = async function () {
 
     } catch (error) {
       status.textContent = `QR generation failed: ${error.message}`;
-      console.error("[ShellPGP] QR generation failed", error);
+      console.error("[GapPGP] QR generation failed", error);
     } finally {
       button.disabled = false;
     }
   });
 })();
 
-// ShellPGP v0.5 — Local QR signature-response scanner.
+// GapPGP v0.5 — Local QR signature-response scanner.
 //
 // The camera is activated only after an explicit click.
 // No video or QR data is uploaded.
@@ -255,7 +255,7 @@ window.testShellPGPProtocol = async function () {
             "OpenPGP verification is still pending.";
 
           console.log(
-            "[ShellPGP] Hardware response QR captured"
+            "[GapPGP] Hardware response QR captured"
           );
 
           return;
@@ -305,7 +305,7 @@ window.testShellPGPProtocol = async function () {
         "Camera could not start: " + error.message;
 
       console.error(
-        "[ShellPGP] Camera initialization failed:",
+        "[GapPGP] Camera initialization failed:",
         error.message
       );
     }
@@ -330,7 +330,7 @@ window.testShellPGPProtocol = async function () {
   document.body.append(section);
 })();
 
-// ShellPGP v0.5 — Camera-independent hardware signature verification.
+// GapPGP v0.5 — Camera-independent hardware signature verification.
 
 (function initializeSignatureVerification() {
   const section = document.createElement("section");
@@ -407,13 +407,13 @@ window.testShellPGPProtocol = async function () {
         result.fingerprint +
         " (fixed MIME test fixture only)";
 
-      console.log("[ShellPGP] Cryptographic verification PASS");
+      console.log("[GapPGP] Cryptographic verification PASS");
 
     } catch (error) {
       status.textContent =
         "VERIFICATION FAILED: " + error.message;
 
-      console.error("[ShellPGP] Verification failed:", error.message);
+      console.error("[GapPGP] Verification failed:", error.message);
     } finally {
       button.disabled = false;
     }
@@ -468,7 +468,7 @@ window.testShellPGPProtocol = async function () {
       const link = document.createElement("a");
 
       link.href = url;
-      link.download = "shellpgp-keycard-signed-test.eml";
+      link.download = "gappgp-keycard-signed-test.eml";
 
       document.body.append(link);
       link.click();
@@ -480,13 +480,13 @@ window.testShellPGPProtocol = async function () {
         "Verified signed test email exported — " +
         result.fingerprint;
 
-      console.log("[ShellPGP] Signed PGP/MIME export: PASS");
+      console.log("[GapPGP] Signed PGP/MIME export: PASS");
 
     } catch (error) {
       status.textContent =
         "EXPORT FAILED: " + error.message;
 
-      console.error("[ShellPGP] Export failed", error);
+      console.error("[GapPGP] Export failed", error);
     } finally {
       exportButton.disabled = false;
     }
@@ -504,7 +504,7 @@ window.testShellPGPProtocol = async function () {
   document.body.append(section);
 })();
 
-// ShellPGP v0.6 — Signing request from actual Thunderbird compose content.
+// GapPGP v0.6 — Signing request from actual Thunderbird compose content.
 // This stage generates the QR only; response verification/export comes next.
 
 (function initializeComposeSigning() {
@@ -512,7 +512,7 @@ window.testShellPGPProtocol = async function () {
   section.style.marginTop = "28px";
 
   const heading = document.createElement("h2");
-  heading.textContent = "ShellPGP v0.7 — Approved Identity Signing";
+  heading.textContent = "GapPGP v0.7 — Approved Identity Signing";
 
   const description = document.createElement("p");
   description.textContent =
@@ -696,7 +696,7 @@ window.testShellPGPProtocol = async function () {
         " signed MIME bytes. Review on Keycard Shell. " +
         "Changing the draft requires a new signing request.";
 
-      console.log("[ShellPGP v0.7] Draft signing QR ready", {
+      console.log("[GapPGP v0.7] Draft signing QR ready", {
         messageBytes: payload.byteLength,
         signatureCreationTime
       });
@@ -708,7 +708,7 @@ window.testShellPGPProtocol = async function () {
       status.textContent =
         "DRAFT SIGNING FAILED: " + error.message;
 
-      console.error("[ShellPGP v0.7]", error.message);
+      console.error("[GapPGP v0.7]", error.message);
     } finally {
       generateButton.disabled = false;
     }
@@ -870,7 +870,7 @@ window.testShellPGPProtocol = async function () {
       const link = document.createElement("a");
 
       link.href = url;
-      link.download = "shellpgp-v07-signed-compose.eml";
+      link.download = "gappgp-v07-signed-compose.eml";
 
       document.body.append(link);
       link.click();
@@ -885,7 +885,7 @@ window.testShellPGPProtocol = async function () {
         result.fingerprint;
 
       console.log(
-        "[ShellPGP v0.7] Draft signature verified; EML exported"
+        "[GapPGP v0.7] Draft signature verified; EML exported"
       );
 
     } catch (error) {
@@ -893,7 +893,7 @@ window.testShellPGPProtocol = async function () {
         "DRAFT EXPORT FAILED: " + error.message;
 
       console.error(
-        "[ShellPGP v0.7] Export failed:",
+        "[GapPGP v0.7] Export failed:",
         error.message
       );
     } finally {

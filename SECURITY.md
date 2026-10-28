@@ -1,6 +1,6 @@
 # Security Policy
 
-ShellPGP is an experimental Thunderbird MailExtension for hardware-backed OpenPGP signing with Keycard Shell.
+GapPGP is an experimental Thunderbird MailExtension for hardware-backed OpenPGP signing with Keycard Shell.
 
 ## Status
 
@@ -18,7 +18,7 @@ Do not include private keys, sensitive emails, credentials, or other secrets in 
 
 The demonstrated workflow keeps private signing keys on Keycard hardware.
 
-ShellPGP generates signing requests and processes detached OpenPGP signatures. It does not require importing the private signing key into Thunderbird.
+GapPGP generates signing requests and processes detached OpenPGP signatures. It does not require importing the private signing key into Thunderbird.
 
 The extension verifies hardware-generated signatures before exporting supported test messages, including short plain-text compose drafts in the experimental v0.6 branch.
 

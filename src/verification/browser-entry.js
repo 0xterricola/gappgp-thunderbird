@@ -101,7 +101,7 @@ export async function verifyHardwareSignature({
   };
 }
 
-// ShellPGP v0.5 — Export the verified hardware-signing fixture.
+// GapPGP v0.5 — Export the verified hardware-signing fixture.
 // This is not the current Thunderbird compose message.
 
 export async function createSignedFixtureEmail({
@@ -187,7 +187,7 @@ export async function createSignedFixtureEmail({
   };
 }
 
-// ShellPGP v0.6 — Export a newly signed Thunderbird compose message.
+// GapPGP v0.6 — Export a newly signed Thunderbird compose message.
 // Only the MIME body is cryptographically signed. RFC 5322 headers
 // (From, To, Subject, Date) are not covered by the OpenPGP signature.
 
