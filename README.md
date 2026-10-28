@@ -1,4 +1,4 @@
-# ShellPGP
+# GapPGP
 
 Experimental Thunderbird MailExtension for hardware-backed OpenPGP signing using Keycard Shell.
 
@@ -6,7 +6,7 @@ Experimental Thunderbird MailExtension for hardware-backed OpenPGP signing using
 
 **Experimental proof of concept. Not audited or production-ready.**
 
-ShellPGP v0.5 demonstrates interoperability between Keycard Shell hardware-generated OpenPGP signatures and Thunderbird's native OpenPGP verification.
+GapPGP v0.5 demonstrates interoperability between Keycard Shell hardware-generated OpenPGP signatures and Thunderbird's native OpenPGP verification.
 
 The published v0.5 checkpoint uses a fixed 73-byte MIME fixture. The merged v0.6 milestone additionally signs newly composed, short plain-text Thunderbird messages.
 
@@ -17,15 +17,15 @@ The published v0.5 checkpoint uses a fixed 73-byte MIME fixture. The merged v0.6
 - Signing QR codes render directly inside Thunderbird.
 - Physical Keycard Shell recognizes and approves the signing request.
 - The hardware-generated signature is transported as a UR:BYTES response.
-- ShellPGP decodes the response into an OpenPGP signature packet.
+- GapPGP decodes the response into an OpenPGP signature packet.
 - OpenPGP.js cryptographically verifies the signature inside Thunderbird.
 - Modified messages and modified signatures fail verification.
-- ShellPGP exports a signed PGP/MIME `.eml` test message.
+- GapPGP exports a signed PGP/MIME `.eml` test message.
 - Thunderbird independently reports **Good Digital Signature** for the exported message.
 
 ## Demonstrated Workflow
 
-Thunderbird -> ShellPGP signing QR -> Keycard Shell hardware approval -> response QR -> paste UR:BYTES response into ShellPGP -> verify -> export signed `.eml` -> Thunderbird native OpenPGP verification.
+Thunderbird -> GapPGP signing QR -> Keycard Shell hardware approval -> response QR -> paste UR:BYTES response into GapPGP -> verify -> export signed `.eml` -> Thunderbird native OpenPGP verification.
 
 The return path currently uses manual paste because live camera access is blocked in the tested Thunderbird environment.
 
@@ -68,14 +68,14 @@ or native Thunderbird sending implementation.
 
 **Status:** Experimental hardware-tested development checkpoint.
 
-ShellPGP v0.7 extends real Thunderbird compose signing with
+GapPGP v0.7 extends real Thunderbird compose signing with
 sender-aware OpenPGP certificate selection.
 
 Demonstrated capabilities:
 
 - Provision a self-certified OpenPGP identity using Keycard Shell.
 - Independently verify the certificate with GnuPG.
-- Select a public certificate in Thunderbird's ShellPGP preview.
+- Select a public certificate in Thunderbird's GapPGP preview.
 - Require an explicitly approved certificate fingerprint.
 - Verify that the certified email matches the Thunderbird sender.
 - Derive the signing-key creation timestamp from the certificate.
@@ -146,7 +146,7 @@ See `LIMITATIONS.md` for additional details.
 
 Private signing keys remain on Keycard hardware during the demonstrated workflow.
 
-ShellPGP uses OpenPGP.js for verification and pins the expected public test certificate fingerprint for the fixture workflow.
+GapPGP uses OpenPGP.js for verification and pins the expected public test certificate fingerprint for the fixture workflow.
 
 A cryptographically valid signature does not independently establish the real-world identity of the signer.
 

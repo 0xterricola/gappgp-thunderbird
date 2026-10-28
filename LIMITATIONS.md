@@ -1,6 +1,6 @@
 # Limitations
 
-ShellPGP remains an experimental proof of concept. v0.5 is fixture-only; the v0.6 development branch additionally supports short real Thunderbird drafts.
+GapPGP remains an experimental proof of concept. v0.5 is fixture-only; the v0.6 development branch additionally supports short real Thunderbird drafts.
 
 ## Signing
 

@@ -1,8 +1,8 @@
 {
   "manifest_version": 2,
-  "name": "ShellPGP",
+  "name": "GapPGP",
   "version": "0.1.0",
-  "description": "Experimental Keycard Shell OpenPGP integration for Thunderbird",
+  "description": "Experimental GapPGP hardware-backed OpenPGP signing for Thunderbird",
   "browser_specific_settings": {
     "gecko": {
       "id": "shellpgp@terricola.dev",
@@ -21,8 +21,8 @@
     ]
   },
   "compose_action": {
-    "default_title": "ShellPGP Sign",
-    "default_label": "ShellPGP Sign"
+    "default_title": "GapPGP Sign",
+    "default_label": "GapPGP Sign"
   },
   "experiment_apis": {
     "composeProbe": {

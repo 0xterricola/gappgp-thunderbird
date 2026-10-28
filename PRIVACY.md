@@ -1,6 +1,6 @@
 # Privacy
 
-ShellPGP is an experimental local Thunderbird MailExtension.
+GapPGP is an experimental local Thunderbird MailExtension.
 
 ## Current Behavior
 

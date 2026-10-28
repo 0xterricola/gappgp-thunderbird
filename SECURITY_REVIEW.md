@@ -96,7 +96,7 @@ This implementation has not undergone an independent audit.
 
 The test certificate uses secp256k1 ECDSA with SHA-256.
 
-OpenPGP.js restricts secp256k1 under its default curve policy. ShellPGP uses an operation-scoped configuration to permit this curve for the known test certificate.
+OpenPGP.js restricts secp256k1 under its default curve policy. GapPGP uses an operation-scoped configuration to permit this curve for the known test certificate.
 
 Other configured curve restrictions are preserved.
 
@@ -133,4 +133,4 @@ Production email signing must create and sign the actual message during the comp
 
 ## Security Claims
 
-Do not describe ShellPGP as audited, production-ready, end-to-end encrypted, or a complete Thunderbird OpenPGP signing solution.
+Do not describe GapPGP as audited, production-ready, end-to-end encrypted, or a complete Thunderbird OpenPGP signing solution.
