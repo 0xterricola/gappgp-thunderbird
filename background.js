@@ -1,6 +1,6 @@
 "use strict";
 
-console.log("[ShellPGP] Extension initialized");
+console.log("[GapPGP] Extension initialized");
 
 browser.composeAction.onClicked.addListener(async (tab) => {
   try {
@@ -13,10 +13,10 @@ browser.composeAction.onClicked.addListener(async (tab) => {
     active: true
   });
 
-    console.log("[ShellPGP] Signing preview opened", {
+    console.log("[GapPGP] Signing preview opened", {
       tabId: tab.id
     });
   } catch (error) {
-    console.error("[ShellPGP] Preview failed:", error);
+    console.error("[GapPGP] Preview failed:", error);
   }
 });

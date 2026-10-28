@@ -103,7 +103,7 @@ test("v0.7 preview uses approved identity and invalidates changed selection", as
     ...window.document.querySelectorAll("h2")
   ].find(element =>
     element.textContent.includes(
-      "ShellPGP v0.7 — Approved Identity Signing"
+      "GapPGP v0.7 — Approved Identity Signing"
     )
   );
 
